@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>离线友好合约策略面板</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css" />
+  <style>
+    body { padding: 1.5rem 2rem; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1rem; }
+    pre { max-height: 220px; overflow: auto; background: #0f172a; color: #e2e8f0; padding: 1rem; border-radius: 0.5rem; }
+    .status { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+    .danger { color: #ef4444; }
+    .success { color: #22c55e; }
+    .muted { color: #6b7280; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>AI 合约策略监控面板</h1>
+    <p>面板通过纯 REST / SSE 与 Java 后端通信，可直接部署在任何静态服务器中进行离线演示或实盘运维。</p>
+    <section id="overview" aria-live="polite"></section>
+    <section class="grid" id="contract-grid"></section>
+  </main>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
