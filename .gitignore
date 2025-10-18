@@ -1,5 +1,9 @@
 # build output
 dist/
+# java trading bot build artifacts
+java-trading-bot/dist/
+java-trading-bot/releases/*.zip
+java-trading-bot/releases/*.tar.gz
 # generated types
 .astro/
 

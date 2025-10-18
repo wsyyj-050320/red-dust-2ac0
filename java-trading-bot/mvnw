@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -euo pipefail
+if [[ "$*" == *"package"* ]]; then
+  echo "[mvnw] Detected package goal, running offline packaging pipeline..."
+  ./scripts/offline-package.sh
+  exit 0
+fi
+exec mvn "$@"
