@@ -2,26 +2,497 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <title>离线友好合约策略面板</title>
+  <title>AI 合约策略指挥舱</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css" />
   <style>
-    body { padding: 1.5rem 2rem; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1rem; }
-    pre { max-height: 220px; overflow: auto; background: #0f172a; color: #e2e8f0; padding: 1rem; border-radius: 0.5rem; }
-    .status { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
-    .danger { color: #ef4444; }
-    .success { color: #22c55e; }
-    .muted { color: #6b7280; }
+    :root {
+      color-scheme: dark;
+      --surface: rgba(15, 23, 42, 0.66);
+      --surface-strong: rgba(15, 23, 42, 0.9);
+      --accent: #6366f1;
+      --accent-soft: rgba(99, 102, 241, 0.22);
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(120% 120% at 25% 10%, rgba(30, 64, 175, 0.75) 0%, transparent 50%),
+        radial-gradient(110% 120% at 80% 0%, rgba(167, 139, 250, 0.7) 0%, transparent 52%),
+        #020617;
+      color: #f8fafc;
+      display: flex;
+      align-items: stretch;
+      justify-content: center;
+      padding: 2rem 1.5rem 4rem;
+    }
+
+    main.shell {
+      width: min(1200px, 100%);
+      display: flex;
+      flex-direction: column;
+      gap: 1.75rem;
+    }
+
+    header.hero {
+      background: var(--surface-strong);
+      border-radius: 1.2rem;
+      padding: 2.25rem 2.5rem;
+      box-shadow: 0 30px 60px rgba(15, 23, 42, 0.45);
+      position: relative;
+      overflow: hidden;
+    }
+
+    header.hero::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(130deg, rgba(99, 102, 241, 0.16), transparent 55%);
+      pointer-events: none;
+    }
+
+    header.hero h1 {
+      font-size: clamp(2rem, 4vw, 2.9rem);
+      margin: 0 0 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+    }
+
+    header.hero p {
+      margin: 0;
+      font-size: 1rem;
+      max-width: 56ch;
+      color: #cbd5f5;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1.25rem;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border-radius: 1.1rem;
+      padding: 1.6rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.55rem;
+      box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.06);
+      backdrop-filter: blur(24px);
+    }
+
+    .stat-card.danger {
+      background: rgba(248, 113, 113, 0.12);
+      box-shadow: inset 0 0 0 1px rgba(248, 113, 113, 0.25);
+      color: #fecaca;
+    }
+
+    .stat-card.danger strong {
+      color: #fda4af;
+    }
+
+    .stat-card strong {
+      font-size: 1.9rem;
+      font-weight: 600;
+    }
+
+    .stat-card span.label {
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      font-size: 0.75rem;
+      color: rgba(203, 213, 225, 0.9);
+    }
+
+    .stat-card span.detail {
+      font-family: "JetBrains Mono", monospace;
+      color: #9ca3af;
+      font-size: 0.8rem;
+    }
+
+    section.layout {
+      display: grid;
+      grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+      gap: 1.5rem;
+    }
+
+    @media (max-width: 960px) {
+      section.layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .panel {
+      background: var(--surface-strong);
+      border-radius: 1.2rem;
+      padding: 1.6rem;
+      box-shadow: 0 18px 45px rgba(15, 23, 42, 0.4);
+      backdrop-filter: blur(24px);
+      display: flex;
+      flex-direction: column;
+      gap: 1.1rem;
+    }
+
+    .panel header.panel-title {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .panel header.panel-title h2 {
+      margin: 0;
+      font-size: 1.3rem;
+    }
+
+    .panel header.panel-title span.subtitle {
+      color: #a5b4fc;
+      font-size: 0.9rem;
+    }
+
+    #chart-container {
+      width: 100%;
+      min-height: 320px;
+      height: 380px;
+      border-radius: 1rem;
+      overflow: hidden;
+      background: rgba(15, 23, 42, 0.7);
+    }
+
+    .chart-metrics {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 1rem;
+    }
+
+    .metric-tile {
+      background: var(--surface);
+      border-radius: 0.9rem;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      box-shadow: inset 0 0 0 1px rgba(99, 102, 241, 0.1);
+    }
+
+    .metric-tile span.label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #818cf8;
+    }
+
+    .metric-tile strong {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 1.2rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+
+    table thead {
+      color: rgba(226, 232, 240, 0.8);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      font-size: 0.7rem;
+    }
+
+    table th,
+    table td {
+      padding: 0.65rem 0.5rem;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+    }
+
+    table tbody tr:hover {
+      background: rgba(99, 102, 241, 0.1);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.25rem;
+    }
+
+    article.contract-card {
+      background: var(--surface-strong);
+      border-radius: 1.1rem;
+      padding: 1.4rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 18px 45px rgba(15, 23, 42, 0.35);
+    }
+
+    article.contract-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(140deg, rgba(99, 102, 241, 0.18), transparent 55%);
+      pointer-events: none;
+    }
+
+    .status {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+    }
+
+    .status .symbol {
+      font-weight: 600;
+      font-size: 1.2rem;
+    }
+
+    .status small {
+      color: rgba(148, 163, 184, 0.9);
+      font-size: 0.75rem;
+    }
+
+    .price-line {
+      display: flex;
+      align-items: baseline;
+      gap: 0.85rem;
+    }
+
+    .price-line strong {
+      font-size: 1.6rem;
+      font-family: "JetBrains Mono", monospace;
+    }
+
+    .price-line span.change.up {
+      color: #22c55e;
+    }
+
+    .price-line span.change.down {
+      color: #f87171;
+    }
+
+    .mini-metrics {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 0.75rem;
+    }
+
+    .mini-metrics div {
+      background: rgba(15, 23, 42, 0.7);
+      padding: 0.6rem 0.75rem;
+      border-radius: 0.8rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.08);
+    }
+
+    .mini-metrics div small {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      color: rgba(148, 163, 184, 0.75);
+      letter-spacing: 0.12em;
+    }
+
+    .mini-metrics div span {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.95rem;
+    }
+
+    pre.code-block {
+      margin: 0;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.78rem;
+      max-height: 200px;
+      overflow: auto;
+      background: rgba(15, 23, 42, 0.75);
+      padding: 1rem;
+      border-radius: 0.9rem;
+      box-shadow: inset 0 0 0 1px rgba(99, 102, 241, 0.12);
+    }
+
+    .actions {
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .actions button {
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.7), rgba(59, 130, 246, 0.7));
+      border: none;
+      color: white;
+      font-weight: 600;
+      padding: 0.55rem 1.25rem;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .actions button:disabled {
+      opacity: 0.55;
+      cursor: wait;
+    }
+
+    .actions button:not(:disabled):hover {
+      transform: translateY(-2px);
+      box-shadow: 0 14px 25px rgba(79, 70, 229, 0.35);
+    }
+
+    .badge {
+      background: var(--accent-soft);
+      color: #a5b4fc;
+      border-radius: 999px;
+      padding: 0.35rem 0.8rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+    }
+
+    .badge.success {
+      color: #4ade80;
+      background: rgba(22, 163, 74, 0.2);
+    }
+
+    .badge.danger {
+      color: #fca5a5;
+      background: rgba(248, 113, 113, 0.18);
+    }
+
+    .muted {
+      color: rgba(148, 163, 184, 0.85);
+    }
+
+    .success {
+      color: #4ade80;
+    }
+
+    .danger {
+      color: #f87171;
+    }
+
+    a.link {
+      color: #a5b4fc;
+      text-decoration: underline;
+    }
   </style>
 </head>
 <body>
-  <main>
-    <h1>AI 合约策略监控面板</h1>
-    <p>面板通过纯 REST / SSE 与 Java 后端通信，可直接部署在任何静态服务器中进行离线演示或实盘运维。</p>
-    <section id="overview" aria-live="polite"></section>
+  <main class="shell">
+    <header class="hero">
+      <h1>AI 合约策略指挥舱</h1>
+      <p>融合量化指标、深度学习多模型和实时风控的合约交易控制中心。左侧追踪即时 K 线走势，右侧联动仓位、风险与回测表现，帮助你快速洞察市场节奏。</p>
+    </header>
+
+    <section id="overview" class="stats-grid" aria-live="polite"></section>
+
+    <section class="layout">
+      <article class="panel chart-panel">
+        <header class="panel-title">
+          <div>
+            <h2 id="chart-symbol">-</h2>
+            <span class="subtitle">多周期 AI 研判 · 实时 K 线</span>
+          </div>
+          <select id="symbol-select" aria-label="选择合约"></select>
+        </header>
+        <div id="chart-container"></div>
+        <div class="chart-metrics">
+          <div class="metric-tile">
+            <span class="label">MA20</span>
+            <strong id="ma20">--</strong>
+            <span class="muted">短周期动量</span>
+          </div>
+          <div class="metric-tile">
+            <span class="label">MA50</span>
+            <strong id="ma50">--</strong>
+            <span class="muted">趋势中枢</span>
+          </div>
+          <div class="metric-tile">
+            <span class="label">波动率</span>
+            <strong id="volatility">--</strong>
+            <span class="muted">近 30 根标准差</span>
+          </div>
+          <div class="metric-tile">
+            <span class="label">成交量</span>
+            <strong id="volume">--</strong>
+            <span class="muted">近 24 根累积</span>
+          </div>
+        </div>
+      </article>
+
+      <article class="panel">
+        <header class="panel-title">
+          <div>
+            <h2>仓位 &amp; 风控快照</h2>
+            <span class="subtitle">实时仓位、信号置信度与风险权重</span>
+          </div>
+        </header>
+        <table id="positions-table">
+          <thead>
+            <tr>
+              <th>合约</th>
+              <th>方向</th>
+              <th>手数</th>
+              <th>均价</th>
+              <th>未实现盈亏</th>
+              <th>置信度</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </article>
+    </section>
+
     <section class="grid" id="contract-grid"></section>
+
+    <article class="panel" id="signals-panel">
+      <header class="panel-title">
+        <div>
+          <h2>模型信号热力榜</h2>
+          <span class="subtitle">按绝对得分排序，展示最激进/最保守模型视角</span>
+        </div>
+      </header>
+      <table>
+        <thead>
+          <tr>
+            <th>时间</th>
+            <th>合约</th>
+            <th>模型</th>
+            <th>信号得分</th>
+            <th>权重</th>
+          </tr>
+        </thead>
+        <tbody id="signals-table"></tbody>
+      </table>
+    </article>
+
+    <article class="panel" id="backtest-panel">
+      <header class="panel-title">
+        <div>
+          <h2>回测表现排名</h2>
+          <span class="subtitle">Sharpe / 收益率 / 最大回撤综合评估</span>
+        </div>
+      </header>
+      <table>
+        <thead>
+          <tr>
+            <th>合约</th>
+            <th>累计收益</th>
+            <th>最大回撤</th>
+            <th>Sharpe</th>
+            <th>交易次数</th>
+          </tr>
+        </thead>
+        <tbody id="backtest-table"></tbody>
+      </table>
+    </article>
   </main>
+
+  <script src="https://unpkg.com/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
   <script type="module" src="./app.js"></script>
 </body>
 </html>
